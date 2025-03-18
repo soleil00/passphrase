@@ -19,7 +19,7 @@ export const services = [
         "Prevents unauthorized access to your Pi balance",
         "Receive confirmation once protection is active"
       ],
-      "subtitle": "Secure your Pi on unlock when you believe your passphrase is leaked to scammers website"
+      "subtitle": "Authorize the platform to help recover the soon-to-be-unlocked Pi, only used in case the Wallet key cluster has been hijacked by a scam website"
     },
     {
       "_id": "67d54ca113d5101c76bb246e",

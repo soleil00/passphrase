@@ -13,7 +13,7 @@ export interface IUser {
     requests: IRequest[];
     role: "admin" | "user";
 }
-const scopes = ["username", "payments", "wallet_address"];
+const scopes = ["username", "payments"];
 
 export type AuthResult = {
     accessToken: string;
@@ -176,6 +176,7 @@ const authSlice = createSlice({
       .addCase(authenticateUser.fulfilled, (state, action) => {
         localStorage.setItem("token",action.payload.token)
         state.currentUser = action.payload.currentUser;
+      // alert(action.payload.currentUser.username)
       });
   },
 });

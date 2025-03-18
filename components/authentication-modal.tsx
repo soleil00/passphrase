@@ -82,10 +82,10 @@ const AuthenticationModal = ({ isOpen, onClose }: AuthenticationModalProps) => {
             )}
           </div>
           <DialogTitle className="text-center">
-            {success ? "Authentication Successful" : "Authentication Required"}
+            {success ? "Authentication Successful" : "Authentication Via Pi Browser "}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {success ? "You have been successfully authenticated" : "You need to be logged in to access this service"}
+            {success ? "You have been successfully authenticated" : "You need to Authenticate Pi your identity when using the Recovery service. "}
           </DialogDescription>
         </DialogHeader>
 
