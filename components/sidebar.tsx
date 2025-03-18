@@ -36,11 +36,16 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
+  const hanldeclick = ()=>{
+    setIsMobileOpen(!isMobileOpen)
+  }
+
   const NavItem = ({ item, isBottom = false }: { item: { href: string; name: string; icon: React.ElementType }; isBottom?: boolean }) => (
     <Tooltip delayDuration={0}>
       <TooltipTrigger asChild>
         <Link
           href={item.href}
+          onClick={()=>setIsMobileOpen(!isMobileOpen)}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
             pathname === item.href

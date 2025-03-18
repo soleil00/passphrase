@@ -14,7 +14,6 @@ const RecoverSuccess = ({ isProtection }: { isProtection: string }) => {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    // Simulate progress increasing over time
     if (isProcessing) {
       const interval = setInterval(() => {
         setProgress((prev) => {
@@ -89,7 +88,7 @@ const RecoverSuccess = ({ isProtection }: { isProtection: string }) => {
                 <Info className="h-4 w-4" />
                 <AlertTitle>Fee Information</AlertTitle>
                 <AlertDescription>
-                  A 25% service fee has been deducted from your Pi balance. You can view the details in your dashboard.
+                  Please note that a 25% service fee will be deducted from your Pi balance upon completion of the operation. If no fee applies, you will be notified accordingly.
                 </AlertDescription>
               </Alert>
             </div>

@@ -176,7 +176,6 @@ const authSlice = createSlice({
       .addCase(authenticateUser.fulfilled, (state, action) => {
         localStorage.setItem("token",action.payload.token)
         state.currentUser = action.payload.currentUser;
-      // alert(action.payload.currentUser.username)
       });
   },
 });

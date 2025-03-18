@@ -9,11 +9,13 @@ import { motion } from "framer-motion"
 import { useAppSelector } from "@/redux/hooks"
 import { usePathname, useRouter } from "next/navigation"
 import { services } from "@/constants"
-import  AuthenticationModal  from "./authentication-modal"
+import AuthenticationModal from "./authentication-modal"
+import { TERMS_ACCEPTED_KEY, TermsAndConditionsModal } from "./terms-conditions"
 
 export function ServiceSelection() {
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false)
   const [pendingServiceId, setPendingServiceId] = useState<string | null>(null)
   const { currentUser } = useAppSelector((state) => state.auth)
   const router = useRouter()
@@ -22,14 +24,20 @@ export function ServiceSelection() {
   const isService = pathname.startsWith("/services")
 
   const handleSelectService = (id: string) => {
-    // If user is not authenticated, show auth modal
+    const termsAccepted = localStorage.getItem(TERMS_ACCEPTED_KEY)
+
+    if (termsAccepted !== "accepted") {
+      setIsTermsModalOpen(true)
+      setPendingServiceId(id)
+      return
+    }
+
     if (!currentUser) {
       setIsAuthModalOpen(true)
       setPendingServiceId(id)
       return
     }
 
-    // Otherwise proceed with selection
     setSelectedService(id)
     router.push(`/new-request?service=${id}`)
   }
@@ -37,6 +45,20 @@ export function ServiceSelection() {
   const handleAuthModalClose = () => {
     setIsAuthModalOpen(false)
     setPendingServiceId(null)
+  }
+
+  const handleTermsAccepted = () => {
+    // If there was a pending service selection, process it now
+    if (pendingServiceId) {
+      if (!currentUser) {
+        // User accepted terms but still needs to log in
+        setIsAuthModalOpen(true)
+      } else {
+        // User accepted terms and is logged in, proceed to service
+        setSelectedService(pendingServiceId)
+        router.push(`/new-request?service=${pendingServiceId}`)
+      }
+    }
   }
 
   const handleServiceClick = (serviceId: string) => {
@@ -122,8 +144,12 @@ export function ServiceSelection() {
         </div>
       </motion.div>
 
-      {/* Authentication Modal */}
       <AuthenticationModal isOpen={isAuthModalOpen} onClose={handleAuthModalClose} />
+      <TermsAndConditionsModal
+        open={isTermsModalOpen}
+        onOpenChange={setIsTermsModalOpen}
+        onAccept={handleTermsAccepted}
+      />
     </motion.div>
   )
 }
