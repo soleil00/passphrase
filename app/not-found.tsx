@@ -1,8 +1,15 @@
+"use client"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Shield, Home, ArrowLeft, Search } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 export default function NotFoundAlt() {
+
+  const pathname = usePathname()
+
+  const isAdmin = pathname.startsWith("/control-panel-x7z9q")
+
   return (
     <div className="container flex flex-col items-center justify-center min-h-[80vh] py-12 px-4">
       <div className="flex flex-col items-center text-center max-w-lg">
@@ -24,7 +31,7 @@ export default function NotFoundAlt() {
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <Button asChild size="lg" className="flex-1">
-            <Link href="/">
+            <Link href={isAdmin ? "/control-panel-x7z9q":"/"}>
               <Home className="h-5 w-5 mr-2" />
               Return Home
             </Link>

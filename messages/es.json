@@ -1,0 +1,17 @@
+{
+    "Index": {
+      "title": "Bienvenido a nuestro sitio web",
+      "description": "Este es un ejemplo de un sitio web multilingüe que utiliza next-intl para traducciones.",
+      "features": {
+        "title": "Características principales",
+        "item1": "Control total sobre las traducciones",
+        "item2": "URLs amigables para SEO con prefijos de idioma",
+        "item3": "Excelente rendimiento con generación estática"
+      }
+    },
+    "Common": {
+      "languageSwitcher": "Cambiar idioma"
+    }
+  }
+  
+  

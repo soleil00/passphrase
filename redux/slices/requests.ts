@@ -4,7 +4,10 @@ import axiosClient from "@/lib/axios"
 export interface IRequest {
   requestType: "protection" | "recovery"
   email: string
-  user: string
+  user: {
+    username:string,
+    _id:string
+  }
   phoneNumber: string
   status: "pending" | "processing" | "completed" | "failed"
   country: string
@@ -86,6 +89,24 @@ export const makeRequest = createAsyncThunk(
   },
 )
 
+export const updateRequestStatus = createAsyncThunk(
+  "requests/updateStatus",
+  async ({ requestId, action }: { requestId: string; action: string }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axiosClient.patch(`/requests/${requestId}`, { action }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      return response.data as IRequest
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  },
+)
+
 const requestsSlice = createSlice({
   name: "requests",
   initialState,
@@ -125,6 +146,13 @@ const requestsSlice = createSlice({
       .addCase(makeRequest.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
+      })
+      .addCase(updateRequestStatus.fulfilled, (state, action) => {
+        const index = state.requests.findIndex(request => request._id === action.payload._id);
+
+        if (index !== -1) {
+          state.requests[index].status = action.payload.status; 
+        }
       })
   },
 })

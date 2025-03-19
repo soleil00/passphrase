@@ -1,0 +1,17 @@
+{
+    "Index": {
+      "title": "Welcome to our Website",
+      "description": "This is an example of a multilingual website using next-intl for translations.",
+      "features": {
+        "title": "Key Features",
+        "item1": "Full control over translations",
+        "item2": "SEO-friendly URLs with locale prefixes",
+        "item3": "Excellent performance with static generation"
+      }
+    },
+    "Common": {
+      "languageSwitcher": "Change language"
+    }
+  }
+  
+  

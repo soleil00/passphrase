@@ -28,6 +28,9 @@ export function TopNav() {
   const {currentUser,isPiBrowser,loading:isLoading} = useAppSelector(state => state.auth)
   const dispatch = useAppDispatch()
 
+
+  const isAdmin = pathname.startsWith("/control-panel-x7z9q")
+
   const handlePiAuth = async () => {
 
     if(!isPiBrowser){

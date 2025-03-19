@@ -206,11 +206,11 @@ export default function SupportPage() {
                 <Mail className="h-6 w-6 text-primary" />
                 <div className="text-left">
                   <div className="font-medium">Email</div>
-                  <div className="text-sm text-muted-foreground">support@pirecovery.com</div>
+                  <div className="text-sm text-muted-foreground">support@piphrase.com</div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            {/* <Card>
               <CardContent className="flex items-center justify-center gap-4 p-6">
                 <Phone className="h-6 w-6 text-primary" />
                 <div className="text-left">
@@ -218,7 +218,7 @@ export default function SupportPage() {
                   <div className="text-sm text-muted-foreground">+1 (555) 123-4567</div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

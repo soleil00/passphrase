@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
+import GoogleTranslate from "./google-translate"
+import LanguageSwitcher from "./language-switcher"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -117,6 +119,8 @@ export function Sidebar() {
                 <NavItem key={item.name} item={item} isBottom />
               ))}
             </nav>
+            <GoogleTranslate/>
+            {/* <LanguageSwitcher/> */}
           </div>
         </div>
       </>

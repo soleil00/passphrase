@@ -80,3 +80,28 @@
   }
 }
 
+.google-translate-container {
+  display: inline-block;
+}
+
+/* Hide Google Translate attribution */
+.goog-te-gadget .goog-te-combo {
+  margin: 4px 0;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.goog-te-gadget {
+  font-size: 0;
+  color: transparent;
+}
+
+.goog-te-gadget span {
+  display: none;
+}
+
+.goog-te-gadget select {
+  font-size: 14px;
+  color: #333;
+}

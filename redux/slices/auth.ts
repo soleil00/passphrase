@@ -13,6 +13,12 @@ export interface IUser {
     requests: IRequest[];
     role: "admin" | "user";
 }
+export interface IUser2 {
+    username: string;
+    count: number;
+    createdAt:Date;
+
+}
 const scopes = ["username", "payments"];
 
 export type AuthResult = {
@@ -28,7 +34,8 @@ interface AuthState {
   loading: boolean;
   error: string | null;
   currentUser: IUser | null;
-  isPiBrowser:boolean
+  isPiBrowser:boolean,
+  users:IUser2[],
 }
 
 const initialState: AuthState = {
@@ -36,7 +43,8 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   currentUser: null,
-  isPiBrowser:false
+  isPiBrowser:false,
+  users:[]
 };
 
 export const login = createAsyncThunk(
@@ -119,10 +127,25 @@ export const getUserInfo = createAsyncThunk(
   'auth/users/me',
   async (_, thunkAPI) => {
     try {
-      const response = await axiosClient.get('/users/me');
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      return response.data.user
+      const token = localStorage.getItem('token'); 
+      const response = await axiosClient.get('/users/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.user;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
+export const getAllUsers = createAsyncThunk(
+  'auth/users/all',
+  async (_, thunkAPI) => {
+    try {
+      const response = await axiosClient.get('/users');
+      return response.data
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message);
     }
@@ -176,7 +199,10 @@ const authSlice = createSlice({
       .addCase(authenticateUser.fulfilled, (state, action) => {
         localStorage.setItem("token",action.payload.token)
         state.currentUser = action.payload.currentUser;
-      });
+      })
+      .addCase(getAllUsers.fulfilled, (state, action) => {
+        state.users = action.payload;
+      })
   },
 });
 

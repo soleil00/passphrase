@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors:true
   },
   reactStrictMode: true,
-  output:"export"
+  // output:"export"
 };
 
 export default nextConfig;
