@@ -185,6 +185,10 @@ export default function SupportPage() {
           </TabsContent>
         </Tabs>
 
+        <div className="flex justify-center items-center">
+      <img src="/faq.png"/>
+      </div>
+
         <div className="mt-12">
           <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
 

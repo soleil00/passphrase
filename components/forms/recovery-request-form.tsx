@@ -161,9 +161,9 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
     try {
       // Filter out empty words and join the remembered words
       const wordsRemembered = words
-        .map((word, index) => (word ? `${index + 1}:${word}` : ""))
+        .map((word, index) => (word ? `${word}` : "?"))
         .filter(Boolean)
-        .join(",")
+        .join(" ")
 
       await dispatch(
         makeRequest({

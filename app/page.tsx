@@ -8,6 +8,9 @@ export default function Dashboard() {
 
       <ServiceSelection/>
       <OurFeatures/>
+      <div className="flex justify-center items-center">
+      <img src="/faq.png"/>
+      </div>
     </div>
   )
 }

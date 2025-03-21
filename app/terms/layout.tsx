@@ -11,6 +11,11 @@ export default function TermsLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <main className="min-h-screen bg-background">{children}</main>
+  return <main className="min-h-screen bg-background">
+    {children}
+    <div className="flex justify-center items-center">
+      <img src="/faq.png"/>
+      </div>
+    </main>
 }
 
