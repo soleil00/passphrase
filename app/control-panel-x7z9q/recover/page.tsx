@@ -192,72 +192,105 @@ export default function RecoveryPage() {
 }
 
 function RecoveryResult({
-  recoveredPassphrase,
-  isProcessing,
-  isSuccess,
-  progress,
-}: {
-  recoveredPassphrase: string
-  isProcessing: boolean
-  isSuccess: boolean | null
-  progress: number
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recovery {isProcessing ? "In Progress" : isSuccess ? "Successful" : "Failed"}</CardTitle>
-        <CardDescription>
-          {isProcessing
-            ? "Please wait while we recover your passphrase..."
-            : isSuccess
-              ? "Your passphrase has been successfully recovered"
-              : "We couldn't recover your passphrase"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {isProcessing ? (
-          <div className="space-y-4">
-            <Progress value={progress} className="h-2" />
-            <div className="flex justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-            <p className="text-center text-sm text-muted-foreground">
-              This may take a few moments. Please don&apos;t close this page.
-            </p>
-          </div>
-        ) : isSuccess ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <h3 className="font-medium">Your Recovered Passphrase</h3>
+    recoveredPassphrase,
+    isProcessing,
+    isSuccess,
+    progress,
+  }: {
+    recoveredPassphrase: string
+    isProcessing: boolean
+    isSuccess: boolean | null
+    progress: number
+  }) {
+    const [copyStatus, setCopyStatus] = useState("Copy Passphrase")
+  
+    const handleCopy = () => {
+      navigator.clipboard.writeText(recoveredPassphrase)
+      setCopyStatus("Copied!")
+      setTimeout(() => {
+        setCopyStatus("Copy Passphrase")
+      }, 2000)
+    }
+  
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Recovery {isProcessing ? "In Progress" : isSuccess ? "Successful" : "Failed"}</CardTitle>
+          <CardDescription>
+            {isProcessing
+              ? "Please wait while we recover your passphrase..."
+              : isSuccess
+                ? "Your passphrase has been successfully recovered"
+                : "We couldn't recover your passphrase"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isProcessing ? (
+            <div className="space-y-4">
+              <div className="relative pt-2">
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-right mt-1 text-muted-foreground">{Math.round(progress)}%</p>
               </div>
-              <p className="text-sm font-mono bg-muted p-3 rounded break-all">{recoveredPassphrase}</p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="relative">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-2 w-2 bg-primary rounded-full"></div>
+                  </div>
+                </div>
+                <p className="text-primary font-medium mt-4">Recovering Passphrase...</p>
+                <p className="text-center text-sm text-muted-foreground mt-2">
+                  This process may take a few moments. The algorithm is searching for matching combinations.
+                </p>
+              </div>
+              <Alert variant="default" className="bg-muted/50 border-muted">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Please Wait</AlertTitle>
+                <AlertDescription>
+                  Do not close this window or refresh the page while recovery is in progress.
+                </AlertDescription>
+              </Alert>
             </div>
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Important Security Notice</AlertTitle>
-              <AlertDescription>
-                Store this passphrase in a secure location. Never share it with anyone. This is the only time you&apos;ll see
-                it.
-              </AlertDescription>
-            </Alert>
-            <Button className="w-full">Copy Passphrase</Button>
-          </div>
-        ) : (
-          <div className="space-y-4 text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-            <h3 className="font-medium text-lg">Recovery Failed</h3>
-            <p className="text-muted-foreground">
-              We couldn&apos;t recover your passphrase with the provided information. Please try again with more accurate
-              remembered words.
-            </p>
-            <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+          ) : isSuccess ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-card p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <h3 className="font-medium">Your Recovered Passphrase</h3>
+                </div>
+                <p className="text-sm font-mono bg-muted p-3 rounded break-all">{recoveredPassphrase}</p>
+              </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Important Security Notice</AlertTitle>
+                <AlertDescription>
+                  Store this passphrase in a secure location. Never share it with anyone. This is the only time
+                  you&apos;ll see it.
+                </AlertDescription>
+              </Alert>
+              <Button id="copy-button" className="w-full" onClick={handleCopy}>
+                {copyStatus}
+              </Button>
+              {/* <Button variant="outline" className="w-full mt-2" onClick={resetForm}>
+                Start New Recovery
+              </Button> */}
+            </div>
+          ) : (
+            <div className="space-y-4 text-center">
+              <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+              <h3 className="font-medium text-lg">Recovery Failed</h3>
+              <p className="text-muted-foreground">
+                We couldn&apos;t recover your passphrase with the provided information. Please try again with more
+                accurate remembered words.
+              </p>
+              {/* <Button variant="outline" className="w-full" onClick={resetForm}>
+                Try Again
+              </Button> */}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    )
+  }
+  
+  
