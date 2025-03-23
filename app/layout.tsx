@@ -17,6 +17,7 @@ import { TermsAndConditionsModal } from "@/components/terms-conditions"
 import WarningBanner from "@/components/banner"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { usePathname } from "next/navigation"
+import LoadSCript from "@/components/script-loader"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -100,6 +101,7 @@ export default function RootLayout({
                       </div>
                     </div>
                   </div>
+                 
                 </TooltipProvider>
               </SettingsProvider>
             ) : (
@@ -128,6 +130,7 @@ export default function RootLayout({
                 </SettingsProvider>
               </PiNetworkProvider>
             )}
+            <LoadSCript/>
           </Provider>
         </ThemeProvider>
       </body>

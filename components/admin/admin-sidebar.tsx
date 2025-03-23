@@ -23,6 +23,7 @@ import {
   LogOut,
   BadgeAlert,
   Search,
+  Server,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -53,7 +54,7 @@ export function AdminSidebar() {
   const adminNavigation = [
     { name: "Dashboard", href: "/control-panel-x7z9q", icon: Home },
     { name: "All Requests", href: "/control-panel-x7z9q/requests", icon: ClipboardList, badge: `${requests.length}` },
-    { name: "Services", href: "/control-panel-x7z9q/services", icon: PenTool },
+    { name: "Recover", href: "/control-panel-x7z9q/recover", icon: Server },
     { name: "Banner", href: "/control-panel-x7z9q/banner", icon: BadgeAlert },
     { name: "Users", href: "/control-panel-x7z9q/users", icon: Users, badge: "3" },
     { name: "Search", href: "/control-panel-x7z9q/search", icon: Search },
