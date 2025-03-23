@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,8 +39,7 @@ import { fetchRequests, updateRequestStatus } from "@/redux/slices/requests"
 import { usePathname } from "next/navigation"
 import { EditRequestDialog } from "./edit-request"
 import { exportRequestsToExcel, exportRequestToExcel } from "@/lib/excel-export"
-
-
+import SendMessageModal from "./send-email"
 
 // Define sort types
 type SortField = "createdAt" | "piUnlockTime" | "status" | "none"
@@ -55,6 +55,7 @@ export default function AdminRequestsPage() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null)
   const [dialogMode, setDialogMode] = useState<"view" | "edit">("view")
   const [isExporting, setIsExporting] = useState(false)
+  const [messageModalOpen, setMessageModalOpen] = useState(false)
 
   // Sorting state
   const [sortField, setSortField] = useState<SortField>("none")
@@ -137,18 +138,16 @@ export default function AdminRequestsPage() {
   const handleUpdateStatus = async (requestId: string, newStatus: string) => {
     try {
       await dispatch(updateRequestStatus({ requestId, action: newStatus })).unwrap()
-      
-    
+
       return true
     } catch (error) {
       console.error("Failed to update status:", error)
-     
+
       throw error
     }
   }
 
   const handleRunScript = (request: any) => {
-    
     // Implement script running logic here
   }
 
@@ -156,13 +155,15 @@ export default function AdminRequestsPage() {
     try {
       setIsExporting(true)
       exportRequestToExcel(request)
-     
     } catch (error) {
       console.error("Export failed:", error)
-      
     } finally {
       setIsExporting(false)
     }
+  }
+  const handleSendMessage = (request: any) => {
+    setSelectedRequest(request)
+    setMessageModalOpen(true)
   }
 
   const handleExportAllRequests = async () => {
@@ -180,16 +181,12 @@ export default function AdminRequestsPage() {
           : requests
 
       if (dataToExport.length === 0) {
-       
         return
       }
 
       exportRequestsToExcel(dataToExport)
-
-      
     } catch (error) {
       console.error("Export failed:", error)
-      
     } finally {
       setIsExporting(false)
     }
@@ -435,7 +432,7 @@ export default function AdminRequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRequests.length > 0 ? (
-                    filteredRequests.map((request) => (
+                    filteredRequests.reverse().map((request) => (
                       <TableRow key={request._id}>
                         <TableCell className="font-medium">{request.user.username}</TableCell>
                         <TableCell>
@@ -468,6 +465,11 @@ export default function AdminRequestsPage() {
                               </Button>
                             )}
 
+                            {/* <Button size="sm" variant="default" onClick={() => handleRunScript(request)}>
+                                <Send className="h-4 w-4 mr-1" />
+                                Send Message
+                              </Button> */}
+
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline">
@@ -487,8 +489,12 @@ export default function AdminRequestsPage() {
                                   <Download className="h-4 w-4 mr-2" />
                                   Export Data
                                 </DropdownMenuItem>
+                                {/* <DropdownMenuItem onClick={() => handleSendMessage(request)}>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Send Email
+                                </DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">Cancel Request</DropdownMenuItem>
+                                {/* <DropdownMenuItem className="text-destructive">Cancel Request</DropdownMenuItem> */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -516,6 +522,17 @@ export default function AdminRequestsPage() {
           request={selectedRequest}
           mode={dialogMode}
           onUpdateStatus={handleUpdateStatus}
+        />
+      )}
+
+      {selectedRequest && (
+        <SendMessageModal
+          isOpen={messageModalOpen}
+          onClose={() => setMessageModalOpen(false)}
+          recipientEmail={selectedRequest.email}
+          recipientName={selectedRequest.user.username}
+          requestType={selectedRequest.requestType}
+          requestId={selectedRequest._id}
         />
       )}
     </div>

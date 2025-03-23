@@ -22,6 +22,7 @@ import {
   Ruler,
   LogOut,
   BadgeAlert,
+  Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,7 @@ export function AdminSidebar() {
     { name: "Services", href: "/control-panel-x7z9q/services", icon: PenTool },
     { name: "Banner", href: "/control-panel-x7z9q/banner", icon: BadgeAlert },
     { name: "Users", href: "/control-panel-x7z9q/users", icon: Users, badge: "3" },
+    { name: "Search", href: "/control-panel-x7z9q/search", icon: Search },
   //   { name: "Analytics", href: "/control-panel-x7z9q/analytics", icon: BarChart2 },
   //   { name: "Notifications", href: "/control-panel-x7z9q/notifications", icon: Bell, badge: "5" },
   ]
