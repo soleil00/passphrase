@@ -3,6 +3,7 @@ import recoverPassphraseslice from "./slices/passphrase";
 import serviceSlice from "./slices/service";
 import authSlice from "./slices/auth"
 import requestSlice from "./slices/requests"
+import reviewsSlice from "./slices/reviews";
 
 
 export function makeStore() {
@@ -11,7 +12,8 @@ export function makeStore() {
       passphrase: recoverPassphraseslice,
       services:serviceSlice,
       auth:authSlice,
-      requests:requestSlice
+      requests:requestSlice,
+      reviews:reviewsSlice
     },
   });
 }

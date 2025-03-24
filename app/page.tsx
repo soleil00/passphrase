@@ -1,6 +1,7 @@
 
 import { ServiceSelection } from "@/components/service-selection"
 import OurFeatures from "@/components/our-features"
+import CustomerFeedback from "@/components/review"
 
 export default function Dashboard() {
   return (
@@ -8,6 +9,7 @@ export default function Dashboard() {
 
       <ServiceSelection/>
       <OurFeatures/>
+      <CustomerFeedback/>
       <div className="flex justify-center items-center">
       <img src="/faq.png"/>
       </div>
