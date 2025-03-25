@@ -88,22 +88,7 @@ export default function RootLayout({
                 {children}
               </Suspense>
             ) : isAdmin ? (
-              <SettingsProvider>
-                <TooltipProvider delayDuration={0}>
-                  <div className="min-h-screen flex">
-                    <AdminSidebar/>
-                    <div className="flex-1 lg:pl-72 transition-all duration-300 ease-in-out">
-                      <TopNav />
-                      <div className="container mx-auto p-3 max-w-7xl">
-                        <main className="w-full">
-                          <Suspense>{children}</Suspense>
-                        </main>
-                      </div>
-                    </div>
-                  </div>
-                 
-                </TooltipProvider>
-              </SettingsProvider>
+              <main>{children}</main>
             ) : (
               <PiNetworkProvider>
                 <SettingsProvider>
@@ -114,7 +99,7 @@ export default function RootLayout({
                         <TopNav />
                         <WarningBanner
                           type="danger"
-                          message="Agree to Authorize the service only if your Wallet Passphrase is Exposed!"
+                          message="Agree to Authorize the service only if your Wallet Passphrase is Exposed!.The processing may succeed or fail"
                           icon="alert"
                         />
                         <div className="container mx-auto p-3 max-w-7xl">

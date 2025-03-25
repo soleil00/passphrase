@@ -49,7 +49,9 @@ export const recoverPassphrase = createAsyncThunk(
         // console.log("PiNetWork is loaded");
         // console.log("Passphrase:", passphrase);
         // console.log("PublicKey:", publicKey);
-        // console.log(PiNetWork)
+        console.log(PiNetWork)
+        const missing = await PiNetWork.findMissingWord(passphrase)
+        console.log("Missing words:", missing);
         // const isValidPassphrase = PiNetWork.isValidPiPassphrase(passphrase)
         const response = await PiNetWork.recoverSeedPhraseSplice(passphrase, publicKey)
         return {

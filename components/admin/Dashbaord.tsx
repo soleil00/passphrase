@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { StatCard } from "./stat-card"
 import AdminRequestsPage from "./admin-requests"
 import { useAppSelector } from "@/redux/hooks"
+import AdminOverview from "./overview"
+import AdminEarningsMiniOverview from "./earning-min"
 
 
 export default function AdminDashboard() {
@@ -39,11 +41,15 @@ export default function AdminDashboard() {
       title:"Users",
       count:users.length
     },
+    {
+      title:"Earned Pi",
+      count:400
+    },
   ]
 
   return (
     <div className="">
-      <div className="flex justify-between items-center mb-6">
+      {/* <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
@@ -51,7 +57,9 @@ export default function AdminDashboard() {
         {
           data.map((item,i)=> <StatCard {...item} key={i} />)
         }
-      </div>
+      </div> */}
+      <AdminOverview/>
+      {/* <AdminEarningsMiniOverview/> */}
       <AdminRequestsPage/>
     </div>
   )

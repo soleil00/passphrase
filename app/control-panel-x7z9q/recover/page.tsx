@@ -107,8 +107,8 @@ export default function RecoveryPage() {
   }
 
   return (
-    <div className="container py-12">
-      <div className="max-w-3xl mx-auto">
+    <div className="">
+      <div className=" mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Passphrase Recovery</h1>
           <p className="text-muted-foreground">

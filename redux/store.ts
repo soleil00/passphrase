@@ -4,6 +4,7 @@ import serviceSlice from "./slices/service";
 import authSlice from "./slices/auth"
 import requestSlice from "./slices/requests"
 import reviewsSlice from "./slices/reviews";
+import earningSlice from "./slices/earning";
 
 
 export function makeStore() {
@@ -13,7 +14,8 @@ export function makeStore() {
       services:serviceSlice,
       auth:authSlice,
       requests:requestSlice,
-      reviews:reviewsSlice
+      reviews:reviewsSlice,
+      earnings:earningSlice
     },
   });
 }

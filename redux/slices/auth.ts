@@ -4,6 +4,7 @@ import { IRequest } from './requests';
 import { onIncompletePaymentFound } from '@/lib/pi';
 
 export interface IUser {
+  _id: string;
     username: string;
     email: string;
     password: string;
@@ -12,6 +13,7 @@ export interface IUser {
     uid: string;
     requests: IRequest[];
     role: "admin" | "user";
+    isSuperAdmin:boolean;
 }
 export interface IUser2 {
     username: string;

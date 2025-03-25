@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import axiosClient from "@/lib/axios"
+import { IUser } from "./auth"
 
 export interface IRequest {
   requestType: "protection" | "recovery"
@@ -8,7 +9,6 @@ export interface IRequest {
     username:string,
     _id:string
   }
-  phoneNumber: string
   status: "pending" | "processing" | "completed" | "failed"
   country: string
   publicKey: string
@@ -22,7 +22,11 @@ export interface IRequest {
   walletPassphrase: string
   mainnetWalletAddress: string
   _id: string
-  autoTransferEnabled: boolean
+  autoTransferEnabled: boolean;
+  rejectReason:string;
+  rejectedBy?:IUser;
+  processedBy?:IUser;
+  completedBy?:IUser;
 }
 
 export type CreateRequestPayload = {
@@ -34,7 +38,7 @@ export type CreateRequestPayload = {
     mainnetWalletAddress?: string,
     publicKey?: string,
     wordsRemembered?:string;
-    note:string
+    note:string;
 
 }
 
@@ -91,10 +95,10 @@ export const makeRequest = createAsyncThunk(
 
 export const updateRequestStatus = createAsyncThunk(
   "requests/updateStatus",
-  async ({ requestId, action }: { requestId: string; action: string }, { rejectWithValue }) => {
+  async ({ requestId, action ,rejectReason,amount,passphrase}: { requestId: string; action: string,rejectReason?:string,amount?:number,passphrase?:string }, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await axiosClient.patch(`/requests/${requestId}`, { action }, {
+      const response = await axiosClient.patch(`/requests/${requestId}`, { action ,rejectReason,amount}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

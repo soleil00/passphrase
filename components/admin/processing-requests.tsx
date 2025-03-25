@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react"
 import {
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Shield,
-  Key,
+  Loader2,
   Search,
   Filter,
   Eye,
@@ -18,6 +14,11 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Shield,
+  Key,
+  CheckCircle,
+  AlertTriangle,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,6 +33,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useAppDispatch, useAppSelector } from "@/redux/hooks"
+import { fetchRequests, updateRequestStatus } from "@/redux/slices/requests"
+import { EditRequestDialog } from "./edit-request"
+import { exportRequestsToExcel, exportRequestToExcel } from "@/lib/excel-export"
+import SendMessageModal from "./send-email"
+import { formatTimeAgo } from "@/lib/date-utils"
 import {
   Pagination,
   PaginationContent,
@@ -40,21 +47,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { useAppDispatch, useAppSelector } from "@/redux/hooks"
-import { fetchRequests, updateRequestStatus } from "@/redux/slices/requests"
-import { usePathname } from "next/navigation"
-import { EditRequestDialog } from "./edit-request"
-import { exportRequestsToExcel, exportRequestToExcel } from "@/lib/excel-export"
-import SendMessageModal from "./send-email"
-import { formatTimeAgo } from "@/lib/date-utils"
 
 // Define sort types
 type SortField = "createdAt" | "piUnlockTime" | "status" | "none"
 type SortDirection = "asc" | "desc"
 
-export default function AdminRequestsPage() {
+export default function AdminProcessingRequests() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [countryFilter, setCountryFilter] = useState("all")
   const [unlockTimeFilter, setUnlockTimeFilter] = useState("all")
@@ -72,24 +71,15 @@ export default function AdminRequestsPage() {
   const [itemsPerPage] = useState(10)
 
   // Sorting state
-  const [sortField, setSortField] = useState<SortField>("none")
+  const [sortField, setSortField] = useState<SortField>("createdAt")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
 
   const { requests } = useAppSelector((state) => state.requests)
-  const pathname = usePathname()
-
-  const isRequest = pathname.startsWith("/control-panel-x7z9q/requests")
-
   const dispatch = useAppDispatch()
 
   useEffect(() => {
     dispatch(fetchRequests())
   }, [dispatch])
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, statusFilter, typeFilter, countryFilter, unlockTimeFilter, sortField, sortDirection])
 
   const formatDate = (dateString: Date) => {
     if (!dateString) return "N/A"
@@ -107,34 +97,11 @@ export default function AdminRequestsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return (
-          <Badge className="bg-green-500">
-            <CheckCircle className="mr-1 h-3 w-3" /> Completed
-          </Badge>
-        )
-      case "pending":
-        return (
-          <Badge className="bg-amber-500">
-            <Clock className="mr-1 h-3 w-3" /> Pending
-          </Badge>
-        )
-      case "processing":
-        return (
-          <Badge className="bg-blue-500">
-            <Clock className="mr-1 h-3 w-3" /> Processing
-          </Badge>
-        )
-      case "failed":
-        return (
-          <Badge variant="destructive">
-            <AlertTriangle className="mr-1 h-3 w-3" /> Failed
-          </Badge>
-        )
-      default:
-        return <Badge>{status}</Badge>
-    }
+    return (
+      <Badge className="bg-blue-500">
+        <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Processing
+      </Badge>
+    )
   }
 
   const openViewDialog = (request: any) => {
@@ -173,13 +140,8 @@ export default function AdminRequestsPage() {
       return true
     } catch (error) {
       console.error("Failed to update status:", error)
-
       throw error
     }
-  }
-
-  const handleRunScript = (request: any) => {
-    // Implement script running logic here
   }
 
   const handleExportSingleRequest = (request: any) => {
@@ -192,24 +154,21 @@ export default function AdminRequestsPage() {
       setIsExporting(false)
     }
   }
+
   const handleSendMessage = (request: any) => {
     setSelectedRequest(request)
     setMessageModalOpen(true)
   }
 
-  const handleExportAllRequests = async () => {
+  const handleExportProcessingRequests = async () => {
     try {
       setIsExporting(true)
-      // Use filtered requests if filters are applied, otherwise use all requests
       const dataToExport =
-        filteredRequests.length > 0 &&
-        (searchTerm ||
-          statusFilter !== "all" ||
-          typeFilter !== "all" ||
-          countryFilter !== "all" ||
-          unlockTimeFilter !== "all")
-          ? filteredRequests
-          : requests
+        processingRequests.length > 0
+          ? searchTerm || typeFilter !== "all"
+            ? filteredRequests
+            : processingRequests
+          : []
 
       if (dataToExport.length === 0) {
         return
@@ -258,14 +217,18 @@ export default function AdminRequestsPage() {
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
   }
 
-  // Filter requests
-  const filteredRequests = requests
+  // Filter only processing requests
+  const processingRequests = requests.filter((request) => request.status === "processing")
+
+  // Apply additional filters
+  const filteredRequests = processingRequests
     .filter((request) => {
       const matchesSearch =
         request._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.email.toLowerCase().includes(searchTerm.toLowerCase())
+        request.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.user?.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.processedBy?.username || "").toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesStatus = statusFilter === "all" || request.status === statusFilter
       const matchesType = typeFilter === "all" || request.requestType === typeFilter
       const matchesCountry = countryFilter === "all" || request.country === countryFilter
 
@@ -293,7 +256,7 @@ export default function AdminRequestsPage() {
         }
       }
 
-      return matchesSearch && matchesStatus && matchesType && matchesCountry && matchesUnlockTime
+      return matchesSearch && matchesType && matchesCountry && matchesUnlockTime
     })
     .sort((a, b) => {
       // Apply sorting
@@ -341,22 +304,6 @@ export default function AdminRequestsPage() {
           : dateB - dateA // Descending: latest first
       }
 
-      // Handle sorting by status
-      if (sortField === "status") {
-        // Define status order for sorting
-        const statusOrder = {
-          pending: 1,
-          processing: 2,
-          completed: 3,
-          failed: 4,
-        }
-
-        const statusA = statusOrder[a.status as keyof typeof statusOrder] || 0
-        const statusB = statusOrder[b.status as keyof typeof statusOrder] || 0
-
-        return sortDirection === "asc" ? statusA - statusB : statusB - statusA
-      }
-
       return 0
     })
 
@@ -369,27 +316,25 @@ export default function AdminRequestsPage() {
   return (
     <div className="">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold"> {isRequest ? "Request Management" : "Recent Requests"} </h1>
+        <h1 className="text-3xl font-bold">Processing Requests</h1>
 
-        {isRequest && (
-          <Button onClick={handleExportAllRequests} disabled={isExporting || requests.length === 0} className="gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            {isExporting
-              ? "Exporting..."
-              : `Export ${filteredRequests.length !== requests.length ? "Filtered" : "All"} (${filteredRequests.length})`}
-          </Button>
-        )}
+        <Button
+          onClick={handleExportProcessingRequests}
+          disabled={isExporting || processingRequests.length === 0}
+          className="gap-2"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          {isExporting
+            ? "Exporting..."
+            : `Export ${filteredRequests.length !== processingRequests.length ? "Filtered" : "All"} (${filteredRequests.length})`}
+        </Button>
       </div>
 
       <Card className="my-6">
-        {isRequest ? (
-          <CardHeader>
-            <CardTitle>All Requests</CardTitle>
-            <CardDescription>View and manage all recovery and protection requests</CardDescription>
-          </CardHeader>
-        ) : (
-          <CardHeader></CardHeader>
-        )}
+        <CardHeader>
+          <CardTitle>Processing Requests Summary</CardTitle>
+          <CardDescription>View and manage all requests currently being processed</CardDescription>
+        </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {/* Search and Filters */}
@@ -397,7 +342,7 @@ export default function AdminRequestsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by ID, email"
+                  placeholder="Search by ID, email, username, processor"
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -405,20 +350,6 @@ export default function AdminRequestsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[130px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <span>Status</span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
                   <SelectTrigger className="w-[130px]">
                     <Filter className="h-4 w-4 mr-2" />
@@ -447,7 +378,7 @@ export default function AdminRequestsPage() {
               </div>
             </div>
 
-            {/* Requests Table */}
+            {/* Processing Requests Table */}
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -455,17 +386,15 @@ export default function AdminRequestsPage() {
                     <TableHead>User</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("createdAt")}>
-                      <div className="flex items-center">Requested In {getSortIcon("createdAt")}</div>
+                      <div className="flex items-center">Requested {getSortIcon("createdAt")}</div>
                     </TableHead>
                     <TableHead>Email</TableHead>
-                    {/* <TableHead>Reject Reason</TableHead>
-                    <TableHead>Rejected By</TableHead> */}
-                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("status")}>
-                      <div className="flex items-center">Status {getSortIcon("status")}</div>
-                    </TableHead>
+                    <TableHead>Processed By</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("piUnlockTime")}>
                       <div className="flex items-center">Unlock Time {getSortIcon("piUnlockTime")}</div>
                     </TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -473,7 +402,7 @@ export default function AdminRequestsPage() {
                   {currentItems.length > 0 ? (
                     currentItems.map((request) => (
                       <TableRow key={request._id}>
-                        <TableCell className="font-medium">{request.user.username}</TableCell>
+                        <TableCell className="font-medium">{request.user?.username || "N/A"}</TableCell>
                         <TableCell>
                           {request.requestType === "recovery" ? (
                             <div className="flex items-center">
@@ -489,27 +418,24 @@ export default function AdminRequestsPage() {
                         </TableCell>
                         <TableCell>{formatTimeAgo(request.createdAt)}</TableCell>
                         <TableCell>{request.email}</TableCell>
-                        {/* <TableCell>{request.rejectReason || "-"}</TableCell>
-                        <TableCell>{request.rejectedBy && request.rejectedBy.username || "-"}</TableCell> */}
+                        <TableCell>{request.processedBy?.username || "System"}</TableCell>
                         <TableCell>{getStatusBadge(request.status)}</TableCell>
                         <TableCell>
                           {request.requestType === "protection" && request.piUnlockTime
                             ? formatDate(request.piUnlockTime)
                             : "N/A"}
                         </TableCell>
+                        <TableCell>{request.piBalance ? `${request.piBalance} π` : "N/A"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {/* {(request.status === "pending" || request.status === "processing") && (
-                              <Button size="sm" variant="default" onClick={() => handleRunScript(request)}>
-                                <Play className="h-4 w-4 mr-1" />
-                                Run Script
-                              </Button>
-                            )} */}
-
-                            {/* <Button size="sm" variant="default" onClick={() => handleRunScript(request)}>
-                                <Send className="h-4 w-4 mr-1" />
-                                Send Message
-                              </Button> */}
+                            {/* <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => handleUpdateStatus(request._id, "completed", request.requestType)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Complete
+                            </Button> */}
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -530,12 +456,18 @@ export default function AdminRequestsPage() {
                                   <Download className="h-4 w-4 mr-2" />
                                   Export Data
                                 </DropdownMenuItem>
-                                {/* <DropdownMenuItem onClick={() => handleSendMessage(request)}>
+                                <DropdownMenuItem onClick={() => handleSendMessage(request)}>
                                   <Send className="h-4 w-4 mr-2" />
                                   Send Email
-                                </DropdownMenuItem> */}
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                {/* <DropdownMenuItem className="text-destructive">Cancel Request</DropdownMenuItem> */}
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleUpdateStatus(request._id, "failed", request.requestType)}
+                                >
+                                  <AlertTriangle className="h-4 w-4 mr-2" />
+                                  Reject Request
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -544,63 +476,43 @@ export default function AdminRequestsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                        No requests found matching your filters
+                      <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
+                        No processing requests found
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="p-4 border-t">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        // Show pages around the current page
-                        let pageNum
-                        if (totalPages <= 5) {
-                          // If 5 or fewer pages, show all
-                          pageNum = i + 1
-                        } else if (currentPage <= 3) {
-                          // If near the start, show first 5 pages
-                          pageNum = i + 1
-                        } else if (currentPage >= totalPages - 2) {
-                          // If near the end, show last 5 pages
-                          pageNum = totalPages - 4 + i
-                        } else {
-                          // Otherwise show 2 before and 2 after current page
-                          pageNum = currentPage - 2 + i
-                        }
-
-                        return (
-                          <PaginationItem key={pageNum}>
-                            <PaginationLink onClick={() => setCurrentPage(pageNum)} isActive={currentPage === pageNum}>
-                              {pageNum}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      })}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page}>
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -626,7 +538,7 @@ export default function AdminRequestsPage() {
           isOpen={messageModalOpen}
           onClose={() => setMessageModalOpen(false)}
           recipientEmail={selectedRequest.email}
-          recipientName={selectedRequest.user.username}
+          recipientName={selectedRequest.user?.username}
           requestType={selectedRequest.requestType}
           requestId={selectedRequest._id}
         />

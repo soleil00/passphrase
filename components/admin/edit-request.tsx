@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   CheckCircle,
   Clock,
@@ -60,12 +60,19 @@ interface EditRequestDialogProps {
   onClose: () => void
   request: IRequest
   mode: "view" | "edit"
-  onUpdateStatus?: (requestId: string, newStatus: string) => void
+  onUpdateStatus?: (requestId: string, newStatus: string,type:"recovery"|"protection") => void
+  setPassphrase: React.Dispatch<React.SetStateAction<string>>
+  passphrase: string
+  setRejectReason: React.Dispatch<React.SetStateAction<string>>
+  rejectReason: string
+  amount:number;
+  setAmount:React.Dispatch<React.SetStateAction<number>>
 }
 
-export function EditRequestDialog({ isOpen, onClose, request, mode, onUpdateStatus }: EditRequestDialogProps) {
+export function EditRequestDialog({ isOpen, onClose, request, mode, onUpdateStatus,setRejectReason,rejectReason ,amount,setAmount,passphrase,setPassphrase}: EditRequestDialogProps) {
   const [status, setStatus] = useState(request?.status || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
 
   const formatDate = (dateString: Date) => {
     if (!dateString) return "N/A"
@@ -123,7 +130,9 @@ export function EditRequestDialog({ isOpen, onClose, request, mode, onUpdateStat
 
     setIsSubmitting(true)
     try {
-      await onUpdateStatus(request._id, status)
+      await onUpdateStatus(request._id, status,request.requestType)
+
+      
     //   toast({
     //     title: "Status updated",
     //     description: `Request ${request._id} status has been updated to ${status}`,
@@ -291,6 +300,52 @@ export function EditRequestDialog({ isOpen, onClose, request, mode, onUpdateStat
                     <SelectItem value="failed">Failed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {status === "failed" && (
+              <div className="pt-4 border-t mt-4">
+                <Label htmlFor="rejectReason">Reason for Failure or For Rejecting This Case</Label>
+                <textarea
+                  id="rejectReason"
+                  required
+                  className="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Please provide a reason for rejection"
+                  rows={3}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                />
+              </div>
+            )}
+            {status === "completed" && (
+              <div>
+                <div className="pt-4 border-t mt-4">
+                <Label htmlFor="amount">Amount of pi Earned(25% of platform fee)</Label>
+                <input
+                  id="amount"
+                  required
+                  type="number"
+                  className="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Enter amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value as never)}
+                />
+              </div>
+              {
+                request.requestType === "recovery" && (
+                  <div className="pt-4 border-t mt-4">
+                <Label htmlFor="rejectReason">Enter Full Recovered Passphrase</Label>
+                <textarea
+                  id="passphrase"
+                  required
+                  className="w-full mt-1 p-2 border rounded-md"
+                  placeholder="Enter Full recovered passphrase 24 words"
+                  rows={3}
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                />
+              </div>
+                )
+              }
               </div>
             )}
           </TabsContent>

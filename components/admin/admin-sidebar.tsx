@@ -24,6 +24,13 @@ import {
   BadgeAlert,
   Search,
   Server,
+  Star,
+  LucideMapPinCheckInside,
+  DollarSign,
+  CrossIcon,
+  Timer,
+  ServerCog,
+  Wand,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -50,16 +57,21 @@ export function AdminSidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   const {requests} = useAppSelector(state => state.requests)
+  const {currentUser} = useAppSelector(state => state.auth)
 
   const adminNavigation = [
     { name: "Dashboard", href: "/control-panel-x7z9q", icon: Home },
     { name: "All Requests", href: "/control-panel-x7z9q/requests", icon: ClipboardList, badge: `${requests.length}` },
-    { name: "Recover", href: "/control-panel-x7z9q/recover", icon: Server },
-    { name: "Banner", href: "/control-panel-x7z9q/banner", icon: BadgeAlert },
+    // ...(currentUser?.isSuperAdmin ? [{ name: "Recover", href: "/control-panel-x7z9q/recover", icon: Server }] : []),
+    { name: "Recover", href: "/control-panel-x7z9q/recover", icon: Wand },
+    { name: "Pending", href: "/control-panel-x7z9q/pending", icon: Timer },
+    { name: "Processing", href: "/control-panel-x7z9q/processing", icon: ServerCog },
+    { name: "Completed", href: "/control-panel-x7z9q/completed", icon: LucideMapPinCheckInside },
+    { name: "Rejected", href: "/control-panel-x7z9q/rejected", icon: CrossIcon },
+    { name: "Reviews", href: "/control-panel-x7z9q/reviews", icon: Star },
+    // { name: "Earnigs", href: "/control-panel-x7z9q/earnings", icon: DollarSign },
     { name: "Users", href: "/control-panel-x7z9q/users", icon: Users, badge: "3" },
     { name: "Search", href: "/control-panel-x7z9q/search", icon: Search },
-  //   { name: "Analytics", href: "/control-panel-x7z9q/analytics", icon: BarChart2 },
-  //   { name: "Notifications", href: "/control-panel-x7z9q/notifications", icon: Bell, badge: "5" },
   ]
 
   const handleMobileToggle = () => {

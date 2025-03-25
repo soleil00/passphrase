@@ -1,40 +1,110 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Search, Filter, Eye, Mail, User, ChevronDown, Construction } from "lucide-react"
+import { Search, ChevronDown, Construction, Calendar, ArrowUp, ArrowDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { useAppDispatch, useAppSelector } from "@/redux/hooks"
 import { getAllUsers } from "@/redux/slices/auth"
+import { formatTimeAgo } from "@/lib/date-utils"
 
+// Define sort types
+type SortDirection = "asc" | "desc"
 
 export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const {users} = useAppSelector(state =>state.auth)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [dateFilter, setDateFilter] = useState("all")
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+
+  const { users } = useAppSelector((state) => state.auth)
 
   const dispatch = useAppDispatch()
 
-  useEffect(()=>{
+  useEffect(() => {
     dispatch(getAllUsers())
-  },[dispatch])
+  }, [dispatch])
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.username.toLowerCase().includes(searchTerm.toLowerCase()) 
-    return matchesSearch
-  })
+  // Function to check if a date is within a specific range from now
+  const isDateInRange = (date: Date, days: number): boolean => {
+    const now = new Date()
+    const pastDate = new Date(now)
+    pastDate.setDate(pastDate.getDate() - days)
+
+    return date >= pastDate && date <= now
+  }
+
+  // Apply filters and sorting
+  const filteredAndSortedUsers = users
+    .filter((user) => {
+      // Search filter
+      const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase())
+
+      // Date filter
+      let matchesDateFilter = true
+      if (dateFilter !== "all") {
+        const createdAtDate = new Date(user.createdAt)
+
+        switch (dateFilter) {
+          case "today":
+            matchesDateFilter = isDateInRange(createdAtDate, 1)
+            break
+          case "week":
+            matchesDateFilter = isDateInRange(createdAtDate, 7)
+            break
+          case "15days":
+            matchesDateFilter = isDateInRange(createdAtDate, 15)
+            break
+          case "month":
+            matchesDateFilter = isDateInRange(createdAtDate, 30)
+            break
+          default:
+            matchesDateFilter = true
+        }
+      }
+
+      return matchesSearch && matchesDateFilter
+    })
+    .sort((a, b) => {
+      // Sort by createdAt
+      const dateA = new Date(a.createdAt).getTime()
+      const dateB = new Date(b.createdAt).getTime()
+
+      return sortDirection === "asc"
+        ? dateA - dateB // Ascending: oldest first
+        : dateB - dateA // Descending: newest first
+    })
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentUsers = filteredAndSortedUsers.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredAndSortedUsers.length / itemsPerPage)
+
+  // Toggle sort direction
+  const toggleSortDirection = () => {
+    setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+    setCurrentPage(1) // Reset to first page when sorting changes
+  }
+
+  // Get sort icon based on current sort state
+  const getSortIcon = () => {
+    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
+  }
 
   const formatDate = (dateString: Date) => {
     const date = new Date(dateString)
@@ -49,8 +119,6 @@ export default function AdminUsersPage() {
     return new Intl.DateTimeFormat("en-GB", options).format(date)
   }
 
-
-
   return (
     <div className="">
       <div className="flex justify-between items-center mb-6">
@@ -64,7 +132,7 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-
+            {/* Search and Filters */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -75,6 +143,28 @@ export default function AdminUsersPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Select
+                  value={dateFilter}
+                  onValueChange={(value) => {
+                    setDateFilter(value)
+                    setCurrentPage(1) // Reset to first page when filter changes
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Registration Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Registered Today</SelectItem>
+                    <SelectItem value="week">Last 7 Days</SelectItem>
+                    <SelectItem value="15days">Last 15 Days</SelectItem>
+                    <SelectItem value="month">Last 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="rounded-md border">
@@ -83,13 +173,15 @@ export default function AdminUsersPage() {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Requests</TableHead>
-                    <TableHead>Registered At</TableHead>
+                    <TableHead className="cursor-pointer hover:text-primary" onClick={toggleSortDirection}>
+                      <div className="flex items-center">Registered At {getSortIcon()}</div>
+                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.length > 0 ? (
-                    filteredUsers.map((user) => (
+                  {currentUsers.length > 0 ? (
+                    currentUsers.map((user) => (
                       <TableRow key={user.username}>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -106,7 +198,7 @@ export default function AdminUsersPage() {
                           </div>
                         </TableCell>
                         <TableCell>{user.count}</TableCell>
-                        <TableCell>{formatDate(user.createdAt)}</TableCell>
+                        <TableCell>{formatTimeAgo(user.createdAt)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <DropdownMenu>
@@ -145,13 +237,41 @@ export default function AdminUsersPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
                         No users found matching your filters
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+
+              {totalPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page}>
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </div>
           </div>
         </CardContent>
