@@ -18,7 +18,12 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Settings,
 } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -47,12 +52,84 @@ import { EditRequestDialog } from "./edit-request"
 import { exportRequestsToExcel, exportRequestToExcel } from "@/lib/excel-export"
 import SendMessageModal from "./send-email"
 import { formatTimeAgo } from "@/lib/date-utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+
+// Define available fields for display
+interface FieldConfig {
+  id: string
+  label: string
+  defaultVisible: boolean
+}
 
 // Define sort types
 type SortField = "createdAt" | "piUnlockTime" | "status" | "none"
 type SortDirection = "asc" | "desc"
 
 export default function AdminRequestsPage() {
+  // Field visibility configuration
+  const availableFields: FieldConfig[] = [
+    { id: "user", label: "User", defaultVisible: true },
+    { id: "type", label: "Type", defaultVisible: true },
+    { id: "createdAt", label: "Requested In", defaultVisible: true },
+    { id: "email", label: "Email", defaultVisible: true },
+    { id: "status", label: "Status", defaultVisible: true },
+    { id: "piUnlockTime", label: "Unlock Time", defaultVisible: true },
+    { id: "note", label: "Note", defaultVisible: true },
+    { id: "rejectReason", label: "Reject Reason", defaultVisible: false },
+    { id: "rejectedBy", label: "Rejected By", defaultVisible: false },
+    // { id: "country", label: "Country", defaultVisible: false },
+    // { id: "amount", label: "Amount", defaultVisible: false },
+  ]
+
+  // Initialize visible fields from localStorage or defaults
+  const initVisibleFields = () => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("adminRequestVisibleFields")
+      if (saved) {
+        try {
+          return JSON.parse(saved)
+        } catch (e) {
+          console.error("Failed to parse saved field configuration")
+        }
+      }
+    }
+    return availableFields.filter((field) => field.defaultVisible).map((field) => field.id)
+  }
+
+  const [visibleFields, setVisibleFields] = useState<string[]>(initVisibleFields)
+
+  // Save field selection to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("adminRequestVisibleFields", JSON.stringify(visibleFields))
+    }
+  }, [visibleFields])
+
+  // Toggle field visibility
+  const toggleField = (fieldId: string) => {
+    setVisibleFields((prev) => {
+      if (prev.includes(fieldId)) {
+        // Don't allow removing all fields
+        if (prev.length <= 1) return prev
+        return prev.filter((id) => id !== fieldId)
+      } else {
+        return [...prev, fieldId]
+      }
+    })
+  }
+
+  // Reset to default fields
+  const resetToDefaultFields = () => {
+    setVisibleFields(availableFields.filter((field) => field.defaultVisible).map((field) => field.id))
+  }
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
@@ -258,6 +335,37 @@ export default function AdminRequestsPage() {
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4 ml-1" /> : <ArrowDown className="h-4 w-4 ml-1" />
   }
 
+  // Add a new state for the note modal
+  const [noteModalOpen, setNoteModalOpen] = useState(false)
+  const [selectedNote, setSelectedNote] = useState({ content: "", requestId: "", username: "" })
+
+  // Add a function to handle viewing a note
+  const handleViewNote = (note: string, requestId: string, username: string) => {
+    setSelectedNote({
+      content: note || "No note available",
+      requestId,
+      username,
+    })
+    setNoteModalOpen(true)
+  }
+
+  // Add a function to truncate note text
+  const truncateNote = (note: string | undefined) => {
+    if (!note) return "No note"
+
+    // Split by newlines or approximate 2 lines (about 50 chars per line)
+    const lines = note.split("\n")
+    if (lines.length > 2) {
+      return lines.slice(0, 2).join("\n") + "..."
+    }
+
+    if (note.length > 100) {
+      return note.substring(0, 100) + "..."
+    }
+
+    return note
+  }
+
   // Filter requests
   const filteredRequests = requests
     .filter((request) => {
@@ -381,8 +489,10 @@ export default function AdminRequestsPage() {
         )}
       </div>
 
+      
+
       <Card className="my-6">
-        {isRequest ? (
+       <div className="flex justify-between items-center"> {isRequest ? (
           <CardHeader>
             <CardTitle>All Requests</CardTitle>
             <CardDescription>View and manage all recovery and protection requests</CardDescription>
@@ -390,8 +500,56 @@ export default function AdminRequestsPage() {
         ) : (
           <CardHeader></CardHeader>
         )}
+         <div className="flex justify-end mb-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize Columns
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Table Columns</h4>
+                      <Button variant="ghost" size="sm" onClick={resetToDefaultFields}>
+                        Reset to Default
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-3">
+                      {availableFields.map((field) => (
+                        <div key={field.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`field-${field.id}`}
+                            checked={visibleFields.includes(field.id)}
+                            onCheckedChange={() => toggleField(field.id)}
+                            disabled={visibleFields.length === 1 && visibleFields.includes(field.id)}
+                          />
+                          <Label
+                            htmlFor={`field-${field.id}`}
+                            className={
+                              visibleFields.length === 1 && visibleFields.includes(field.id)
+                                ? "text-muted-foreground"
+                                : ""
+                            }
+                          >
+                            {field.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+        </div>
         <CardContent>
+
+
+          
           <div className="space-y-4">
+            
             {/* Search and Filters */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
@@ -447,70 +605,110 @@ export default function AdminRequestsPage() {
               </div>
             </div>
 
+            {/* Field Selection */}
+           
+
             {/* Requests Table */}
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("createdAt")}>
-                      <div className="flex items-center">Requested In {getSortIcon("createdAt")}</div>
-                    </TableHead>
-                    <TableHead>Email</TableHead>
-                    {/* <TableHead>Reject Reason</TableHead>
-                    <TableHead>Rejected By</TableHead> */}
-                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("status")}>
-                      <div className="flex items-center">Status {getSortIcon("status")}</div>
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("piUnlockTime")}>
-                      <div className="flex items-center">Unlock Time {getSortIcon("piUnlockTime")}</div>
-                    </TableHead>
+                    {visibleFields.includes("user") && <TableHead>User</TableHead>}
+                    {visibleFields.includes("type") && <TableHead>Type</TableHead>}
+                    {visibleFields.includes("note") && <TableHead>Note</TableHead>}
+                    {visibleFields.includes("createdAt") && (
+                      <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("createdAt")}>
+                        <div className="flex items-center">Requested In {getSortIcon("createdAt")}</div>
+                      </TableHead>
+                    )}
+                    {visibleFields.includes("email") && <TableHead>Email</TableHead>}
+                    {visibleFields.includes("rejectReason") && <TableHead>Reject Reason</TableHead>}
+                    {visibleFields.includes("rejectedBy") && <TableHead>Rejected By</TableHead>}
+                    {visibleFields.includes("country") && <TableHead>Country</TableHead>}
+                    {visibleFields.includes("amount") && <TableHead>Amount</TableHead>}
+                    {visibleFields.includes("status") && (
+                      <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("status")}>
+                        <div className="flex items-center">Status {getSortIcon("status")}</div>
+                      </TableHead>
+                    )}
+                    {visibleFields.includes("piUnlockTime") && (
+                      <TableHead
+                        className="cursor-pointer hover:text-primary"
+                        onClick={() => handleSort("piUnlockTime")}
+                      >
+                        <div className="flex items-center">Unlock Time {getSortIcon("piUnlockTime")}</div>
+                      </TableHead>
+                    )}
                     <TableHead className="text-right">Actions</TableHead>
+                    
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentItems.length > 0 ? (
                     currentItems.map((request) => (
                       <TableRow key={request._id}>
-                        <TableCell className="font-medium">{request.user.username}</TableCell>
-                        <TableCell>
-                          {request.requestType === "recovery" ? (
-                            <div className="flex items-center">
-                              <Key className="h-4 w-4 mr-1 text-primary" />
-                              <span>Recovery</span>
+                        {visibleFields.includes("user") && (
+                          <TableCell className="font-medium">{request.user.username}</TableCell>
+                        )}
+                        {visibleFields.includes("type") && (
+                          <TableCell>
+                            {request.requestType === "recovery" ? (
+                              <div className="flex items-center">
+                                <Key className="h-4 w-4 mr-1 text-primary" />
+                                <span>Recovery</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center">
+                                <Shield className="h-4 w-4 mr-1 text-primary" />
+                                <span>Protection</span>
+                              </div>
+                            )}
+                          </TableCell>
+                        )}
+                        {visibleFields.includes("note") && (
+                          <TableCell>
+                            <div className="flex items-start gap-2 max-w-xs">
+                              <div className="line-clamp-2 text-sm">{truncateNote(request.note)}</div>
+                              {request.note && request.note.length > 100 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleViewNote(request.note, request._id, request.user.username)
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  <span className="sr-only">View note</span>
+                                </Button>
+                              )}
                             </div>
-                          ) : (
-                            <div className="flex items-center">
-                              <Shield className="h-4 w-4 mr-1 text-primary" />
-                              <span>Protection</span>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatTimeAgo(request.createdAt)}</TableCell>
-                        <TableCell>{request.email}</TableCell>
-                        {/* <TableCell>{request.rejectReason || "-"}</TableCell>
-                        <TableCell>{request.rejectedBy && request.rejectedBy.username || "-"}</TableCell> */}
-                        <TableCell>{getStatusBadge(request.status)}</TableCell>
-                        <TableCell>
-                          {request.requestType === "protection" && request.piUnlockTime
-                            ? formatDate(request.piUnlockTime)
-                            : "N/A"}
-                        </TableCell>
+                          </TableCell>
+                        )}
+                        {visibleFields.includes("createdAt") && (
+                          <TableCell>{formatTimeAgo(request.createdAt)}</TableCell>
+                        )}
+                        {visibleFields.includes("email") && <TableCell>{request.email}</TableCell>}
+                        {visibleFields.includes("rejectReason") && <TableCell>{request.rejectReason || "-"}</TableCell>}
+                        {visibleFields.includes("rejectedBy") && (
+                          <TableCell>{(request.rejectedBy && request.rejectedBy.username) || "-"}</TableCell>
+                        )}
+                        {visibleFields.includes("country") && <TableCell>{request.country || "-"}</TableCell>}
+                        {/* {visibleFields.includes("amount") && (
+                          //@ts-ignore
+                          <TableCell>{request.amount ? `$${request.amount.toFixed(2)}` : "-"}</TableCell>
+                        )} */}
+                        {visibleFields.includes("status") && <TableCell>{getStatusBadge(request.status)}</TableCell>}
+                        {visibleFields.includes("piUnlockTime") && (
+                          <TableCell>
+                            {request.requestType === "protection" && request.piUnlockTime
+                              ? formatDate(request.piUnlockTime)
+                              : "N/A"}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {/* {(request.status === "pending" || request.status === "processing") && (
-                              <Button size="sm" variant="default" onClick={() => handleRunScript(request)}>
-                                <Play className="h-4 w-4 mr-1" />
-                                Run Script
-                              </Button>
-                            )} */}
-
-                            {/* <Button size="sm" variant="default" onClick={() => handleRunScript(request)}>
-                                <Send className="h-4 w-4 mr-1" />
-                                Send Message
-                              </Button> */}
-
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="outline">
@@ -530,21 +728,17 @@ export default function AdminRequestsPage() {
                                   <Download className="h-4 w-4 mr-2" />
                                   Export Data
                                 </DropdownMenuItem>
-                                {/* <DropdownMenuItem onClick={() => handleSendMessage(request)}>
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Email
-                                </DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
-                                {/* <DropdownMenuItem className="text-destructive">Cancel Request</DropdownMenuItem> */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
                         </TableCell>
+                        
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={visibleFields.length + 1} className="text-center py-4 text-muted-foreground">
                         No requests found matching your filters
                       </TableCell>
                     </TableRow>
@@ -631,6 +825,27 @@ export default function AdminRequestsPage() {
           requestId={selectedRequest._id}
         />
       )}
+      {/* Note Modal */}
+      <Dialog open={noteModalOpen} onOpenChange={setNoteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Note Details</DialogTitle>
+            <DialogDescription>
+              Request ID: {selectedNote.requestId} • User: {selectedNote.username}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <p className="whitespace-pre-wrap">{selectedNote.content}</p>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
