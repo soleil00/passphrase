@@ -1,36 +1,43 @@
-import { Wallet, Lock, Loader } from 'lucide-react';
-import LockedBalanceTable from './LockedBalanceTable';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import React, { SetStateAction, useEffect, useState } from 'react';
-import BalanceCard from './BalanceCard';
-import axios from 'axios';
-import { Button } from '../ui/button';
+"use client"
+
+import { Wallet, Lock, Loader, AlertCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import type React from "react"
+import { type SetStateAction, useState } from "react"
+import BalanceCard from "./BalanceCard"
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface FinanceDashboardProps {
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  setStep: React.Dispatch<SetStateAction<number>>;
-  wallet: string;
-  balance:number,
-  lockedBalance:number,
-  lockDate:string
+  open: boolean
+  setOpen: (open: boolean) => void
+  setStep: React.Dispatch<SetStateAction<number>>
+  wallet: string
+  balance: number
+  lockedBalance: number
+  lockDate: string
 }
 
-const FinanceDashboard = ({ open, setOpen, setStep, wallet ,balance,lockedBalance,lockDate}: FinanceDashboardProps) => {
-  const [loading, setLoading] = useState(false);
-  const [currentBalance, setCurrentBalance] = useState('0.00 PI');
-  const [totalLocked, setTotalLocked] = useState('0.00 PI');
+const FinanceDashboard = ({
+  open,
+  setOpen,
+  setStep,
+  wallet,
+  balance,
+  lockedBalance,
+  lockDate,
+}: FinanceDashboardProps) => {
+  const [loading, setLoading] = useState(false)
 
-
+  // Check if locked balance meets the minimum requirement
+  const hasMinimumBalance = (Number(lockedBalance) + Number(balance)) >= 10
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-7xl w-[95%] rounded-md mx-auto p-6 space-y-6">
         <DialogHeader>
-          <DialogTitle>Wallet Deatils</DialogTitle>
+          <DialogTitle>Wallet Details</DialogTitle>
         </DialogHeader>
-
-        {/* <div>{wallet}</div> */}
 
         {loading ? (
           <div className="flex justify-center items-center">
@@ -56,20 +63,38 @@ const FinanceDashboard = ({ open, setOpen, setStep, wallet ,balance,lockedBalanc
             />
           </div>
         )}
+
+        {/* Conditional alert message when balance is insufficient */}
+        {!hasMinimumBalance && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Requests can only be processed for locked balances above 10Pi. Your current locked balance is insufficient.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex justify-between mt-4">
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {hasMinimumBalance ? "Cancel" : "Close"}
           </Button>
-          <Button  onClick={() => {
-            setOpen(false)
-            setStep(2)
-          }}>
-            Confirm
-          </Button>
+
+          {/* Conditional rendering of the Confirm/Continue button */}
+          {hasMinimumBalance ? (
+            <Button
+              onClick={() => {
+                setOpen(false)
+                setStep(2)
+              }}
+            >
+              Confirm
+            </Button>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
 
-export default FinanceDashboard;
+export default FinanceDashboard
+

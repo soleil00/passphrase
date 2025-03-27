@@ -151,13 +151,13 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
       //   const balance = response2.data.balances[0].balance
       //   console.log("balance is", balance)
 
-      //   console.log("locked balance is", res1.data._embedded.records[0].amount)
-      //   console.log("locked date is", res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
+      //   // console.log("locked balance is", res1.data._embedded.records[0].amount)
+      //   // console.log("locked date is", res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
       //   setBalance(balance)
       //   setLocked(res1.data._embedded.records[0].amount)
       //   setLockDate(res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
       //   setOpen(true)
-      //   console.log("finish")
+      //   // console.log("finish")
       //   window.scrollTo(0, 0)
       // } catch (error) {
       //   console.error("Error fetching data:", error)
@@ -429,7 +429,7 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
                       </>
                     ) : grandLoad ? (
                       <>
-                        Fetching Wallet
+                        Checking Wallet
                         <Loader className="ml-2 w-4 h-4 animate-spin" />
                       </>
                     ):

