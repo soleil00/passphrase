@@ -7,7 +7,6 @@ interface IPassphraseState {
   error: string | null,
 }
 
-
 export const loadPiNetWorkScript = (): Promise<any> => {
     return new Promise((resolve, reject) => {
       if (typeof window !== "undefined" && (window as any).PiNetWork) {
@@ -21,7 +20,6 @@ export const loadPiNetWorkScript = (): Promise<any> => {
   
       script.onload = () => {
         if ((window as any).PiNetWork) {
-        //   console.log("PiNetWork script loaded successfully")
           return resolve((window as any).PiNetWork)
         } else {
           const error = new Error("PiNetWork object not found after script loaded")
@@ -36,26 +34,20 @@ export const loadPiNetWorkScript = (): Promise<any> => {
       }
   
       document.head.appendChild(script)
-    //   console.log("PiNetWork script added to document head")
     })
-  }
+}
 
 export const recoverPassphrase = createAsyncThunk(
   "auth/recoverPassphrase",
   async ({ passphrase, publicKey }: { passphrase: string; publicKey: string }, thunkAPI) => {
     try {
-        const PiNetWork:any =await loadPiNetWorkScript();
+        const PiNetWork:any = await loadPiNetWorkScript();
       if (typeof window !== "undefined" && (window as any).PiNetWork) {
-        // console.log("PiNetWork is loaded");
-        // console.log("Passphrase:", passphrase);
-        // console.log("PublicKey:", publicKey);
-        console.log(PiNetWork)
         const missing = await PiNetWork.findMissingWord(passphrase)
         console.log("Missing words:", missing);
-        // const isValidPassphrase = PiNetWork.isValidPiPassphrase(passphrase)
         const response = await PiNetWork.recoverSeedPhraseSplice(passphrase, publicKey)
         return {
-            passphrase:response,
+            passphrase: response,
             publicKey
         }
       } else {
@@ -68,13 +60,28 @@ export const recoverPassphrase = createAsyncThunk(
 );
 
 
-const initialState:IPassphraseState = {
+export const getPublicKeyFromPassphrase = async (mnemonic: string) => {
+  try {
+    const PiNetWork: any = await loadPiNetWorkScript();
+    if (typeof window !== "undefined" && (window as any).PiNetWork) {
+      const publicKey = await PiNetWork.PublicKeyFromPassPhrase(mnemonic);
+      console.log("Địa chỉ ví (Public Key):", publicKey);
+      return publicKey;
+    } else {
+      throw new Error("PiNetWork is not loaded yet.");
+    }
+  } catch (error) {
+    console.error("Lỗi:", error);
+    throw error;
+  }
+}
+
+const initialState: IPassphraseState = {
   recoveredPassphrase: "",
-  publicKey:"",
+  publicKey: "",
   loading: false,
   error: null as string | null,
 };
-
 
 const recoverPassphraseSlice = createSlice({
   name: "recoverPassphrase",
@@ -97,6 +104,5 @@ const recoverPassphraseSlice = createSlice({
       });
   },
 });
-
 
 export default recoverPassphraseSlice.reducer;

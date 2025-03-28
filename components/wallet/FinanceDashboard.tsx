@@ -29,7 +29,7 @@ const FinanceDashboard = ({
 }: FinanceDashboardProps) => {
   const [loading, setLoading] = useState(false)
 
-  // Check if locked balance meets the minimum requirement
+  
   const hasMinimumBalance = (Number(lockedBalance) + Number(balance)) >= 10
 
   return (
