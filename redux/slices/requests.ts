@@ -27,6 +27,7 @@ export interface IRequest {
   rejectedBy?:IUser;
   processedBy?:IUser;
   completedBy?:IUser;
+  progress: string;
 }
 
 export type CreateRequestPayload = {
@@ -110,6 +111,23 @@ export const updateRequestStatus = createAsyncThunk(
     }
   },
 )
+export const updateRequestProgress = createAsyncThunk(
+  "requests/updateProgress",
+  async ({ requestId, progress}: { requestId: string; progress: string }, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axiosClient.patch(`/requests/${requestId}/progress`, { progress }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      return response.data as IRequest
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  },
+)
 
 const requestsSlice = createSlice({
   name: "requests",
@@ -156,6 +174,13 @@ const requestsSlice = createSlice({
 
         if (index !== -1) {
           state.requests[index].status = action.payload.status; 
+        }
+      })
+      .addCase(updateRequestProgress.fulfilled, (state, action) => {
+        const index = state.requests.findIndex(request => request._id === action.payload._id);
+
+        if (index !== -1) {
+          state.requests[index].progress = action.payload.progress; 
         }
       })
   },

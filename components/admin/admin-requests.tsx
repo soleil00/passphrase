@@ -19,6 +19,7 @@ import {
   ArrowDown,
   ArrowUpDown,
   Settings,
+  Pencil,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -61,6 +62,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog"
+import EditProgressModal from "./edit-progress-modal"
 
 // Define available fields for display
 interface FieldConfig {
@@ -74,19 +76,17 @@ type SortField = "createdAt" | "piUnlockTime" | "status" | "none"
 type SortDirection = "asc" | "desc"
 
 export default function AdminRequestsPage() {
-  // Field visibility configuration
   const availableFields: FieldConfig[] = [
     { id: "user", label: "User", defaultVisible: true },
     { id: "type", label: "Type", defaultVisible: true },
     { id: "createdAt", label: "Requested In", defaultVisible: true },
+    { id: "progress", label: "Progress", defaultVisible: true },
     { id: "email", label: "Email", defaultVisible: true },
     { id: "status", label: "Status", defaultVisible: true },
     { id: "piUnlockTime", label: "Unlock Time", defaultVisible: true },
     { id: "note", label: "Note", defaultVisible: true },
     { id: "rejectReason", label: "Reject Reason", defaultVisible: false },
     { id: "rejectedBy", label: "Rejected By", defaultVisible: false },
-    // { id: "country", label: "Country", defaultVisible: false },
-    // { id: "amount", label: "Amount", defaultVisible: false },
   ]
 
   // Initialize visible fields from localStorage or defaults
@@ -143,6 +143,7 @@ export default function AdminRequestsPage() {
   const [rejectReason, setRejectReason] = useState("")
   const [passphrase, setPassphrase] = useState("")
   const [amount, setAmount] = useState(0)
+  const [isEditingProgress, setIsEditingProgress] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -255,9 +256,7 @@ export default function AdminRequestsPage() {
     }
   }
 
-  const handleRunScript = (request: any) => {
-    // Implement script running logic here
-  }
+
 
   const handleExportSingleRequest = (request: any) => {
     try {
@@ -268,6 +267,10 @@ export default function AdminRequestsPage() {
     } finally {
       setIsExporting(false)
     }
+  }
+  const handleEditProfress = (request: any) => {
+    setSelectedRequest(request)
+    setIsEditingProgress(true)   
   }
   const handleSendMessage = (request: any) => {
     setSelectedRequest(request)
@@ -639,6 +642,7 @@ export default function AdminRequestsPage() {
                         <div className="flex items-center">Unlock Time {getSortIcon("piUnlockTime")}</div>
                       </TableHead>
                     )}
+                    <TableHead className="text-left">Progress</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                     
                   </TableRow>
@@ -707,6 +711,25 @@ export default function AdminRequestsPage() {
                               : "N/A"}
                           </TableCell>
                         )}
+                        <TableCell>
+                            {request.status !== "pending"
+                              ? truncateNote(request.progress) || "-"
+                              : "N/A"}
+                              {request.progress && request.progress.length > 100 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleViewNote(request.progress, request._id, request.user.username)
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  <span className="sr-only">View Progress</span>
+                                </Button>
+                              )}
+                          </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <DropdownMenu>
@@ -727,6 +750,10 @@ export default function AdminRequestsPage() {
                                 <DropdownMenuItem onClick={() => handleExportSingleRequest(request)}>
                                   <Download className="h-4 w-4 mr-2" />
                                   Export Data
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditProfress(request)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit Progress
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                               </DropdownMenuContent>
@@ -846,6 +873,13 @@ export default function AdminRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {selectedRequest && (
+        <EditProgressModal
+          isOpen={isEditingProgress}
+          onClose={() => setIsEditingProgress(false)}
+          request={selectedRequest}
+        />
+      )}
     </div>
   )
 }

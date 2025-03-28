@@ -19,6 +19,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Send,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAppDispatch, useAppSelector } from "@/redux/hooks"
-import { fetchRequests, updateRequestStatus } from "@/redux/slices/requests"
+import requests, { fetchRequests, updateRequestStatus } from "@/redux/slices/requests"
 import { EditRequestDialog } from "./edit-request"
 import { exportRequestsToExcel, exportRequestToExcel } from "@/lib/excel-export"
 import SendMessageModal from "./send-email"
@@ -47,6 +48,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import EditProgressModal from "./edit-progress-modal"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
 
 // Define sort types
 type SortField = "createdAt" | "piUnlockTime" | "status" | "none"
@@ -65,10 +68,17 @@ export default function AdminProcessingRequests() {
   const [rejectReason, setRejectReason] = useState("")
   const [passphrase, setPassphrase] = useState("")
   const [amount, setAmount] = useState(0)
+  const [isEditingProgress, setIsEditingProgress] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
+  const [noteModalOpen, setNoteModalOpen] = useState(false)
+  const [selectedNote, setSelectedNote] = useState({
+    content: "",
+    requestId: "",
+    username: "",
+  })
 
   // Sorting state
   const [sortField, setSortField] = useState<SortField>("createdAt")
@@ -99,7 +109,8 @@ export default function AdminProcessingRequests() {
   const getStatusBadge = (status: string) => {
     return (
       <Badge className="bg-blue-500">
-        <Loader2 className="mr-1 h-3 w-3 animate-spin" /> Processing
+        {/* <Loader2 className="mr-1 h-3 w-3 animate-spin" /> */}
+        Processing
       </Badge>
     )
   }
@@ -158,6 +169,11 @@ export default function AdminProcessingRequests() {
   const handleSendMessage = (request: any) => {
     setSelectedRequest(request)
     setMessageModalOpen(true)
+  }
+
+  const handleEditProfress = (request: any) => {
+    setSelectedRequest(request)
+    setIsEditingProgress(true)   
   }
 
   const handleExportProcessingRequests = async () => {
@@ -313,6 +329,33 @@ export default function AdminProcessingRequests() {
   const currentItems = filteredRequests.slice(indexOfFirstItem, indexOfLastItem)
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage)
 
+
+
+  const handleViewNote = (note: string, requestId: string, username: string) => {
+    setSelectedNote({
+      content: note || "No note available",
+      requestId,
+      username,
+    })
+    setNoteModalOpen(true)
+  }
+
+  const truncateNote = (note: string | undefined) => {
+    if (!note) return "No note available"
+
+    // Split by newlines or approximate 2 lines (about 50 chars per line)
+    const lines = note.split("\n")
+    if (lines.length > 2) {
+      return lines.slice(0, 2).join("\n") + "..."
+    }
+
+    if (note.length > 100) {
+      return note.substring(0, 100) + "..."
+    }
+
+    return note
+  }
+
   return (
     <div className="">
       <div className="flex justify-between items-center mb-6">
@@ -389,12 +432,13 @@ export default function AdminProcessingRequests() {
                       <div className="flex items-center">Requested {getSortIcon("createdAt")}</div>
                     </TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Processed By</TableHead>
+                    {/* <TableHead>Processed By</TableHead> */}
                     <TableHead>Status</TableHead>
                     <TableHead className="cursor-pointer hover:text-primary" onClick={() => handleSort("piUnlockTime")}>
                       <div className="flex items-center">Unlock Time {getSortIcon("piUnlockTime")}</div>
                     </TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead className="text-left">Progress</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -418,7 +462,7 @@ export default function AdminProcessingRequests() {
                         </TableCell>
                         <TableCell>{formatTimeAgo(request.createdAt)}</TableCell>
                         <TableCell>{request.email}</TableCell>
-                        <TableCell>{request.processedBy?.username || "System"}</TableCell>
+                        {/* <TableCell>{request.processedBy?.username || "System"}</TableCell> */}
                         <TableCell>{getStatusBadge(request.status)}</TableCell>
                         <TableCell>
                           {request.requestType === "protection" && request.piUnlockTime
@@ -426,6 +470,25 @@ export default function AdminProcessingRequests() {
                             : "N/A"}
                         </TableCell>
                         <TableCell>{request.piBalance ? `${request.piBalance} π` : "N/A"}</TableCell>
+                        <TableCell>
+                            {request.status !== "pending"
+                              ? truncateNote(request.progress) || "-"
+                              : "N/A"}
+                              {request.progress && request.progress.length > 100 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 rounded-full"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleViewNote(request.progress, request._id, request.user.username)
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                  <span className="sr-only">View Progress</span>
+                                </Button>
+                              )}
+                          </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             {/* <Button
@@ -456,17 +519,21 @@ export default function AdminProcessingRequests() {
                                   <Download className="h-4 w-4 mr-2" />
                                   Export Data
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSendMessage(request)}>
+                                {/* <DropdownMenuItem onClick={() => handleSendMessage(request)}>
                                   <Send className="h-4 w-4 mr-2" />
                                   Send Email
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem
+                                {/* <DropdownMenuItem
                                   className="text-destructive"
-                                  onClick={() => handleUpdateStatus(request._id, "failed", request.requestType)}
-                                >
-                                  <AlertTriangle className="h-4 w-4 mr-2" />
-                                  Reject Request
+                                    onClick={() => handleUpdateStatus(request._id, "failed", request.requestType)}
+                                  >
+                                    <AlertTriangle className="h-4 w-4 mr-2" />
+                                    Reject Request
+                                  </DropdownMenuItem> */}
+                                <DropdownMenuItem onClick={() => handleEditProfress(request)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Edit Progress
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -543,6 +610,36 @@ export default function AdminProcessingRequests() {
           requestId={selectedRequest._id}
         />
       )}
+
+<Dialog open={noteModalOpen} onOpenChange={setNoteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Note Details</DialogTitle>
+            <DialogDescription>
+              Request ID: {selectedNote.requestId} • User: {selectedNote.username}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <p className="whitespace-pre-wrap">{selectedNote.content}</p>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+{selectedRequest && (
+        <EditProgressModal
+          isOpen={isEditingProgress}
+          onClose={() => setIsEditingProgress(false)}
+          request={selectedRequest}
+        />
+      )}
+
     </div>
   )
 }
